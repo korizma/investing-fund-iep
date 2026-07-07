@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 
-from .validator import validate_email, validate_password, validate_jwt, create_jwt
+from .validator import validate_email, validate_password, validate_jwt, create_jwt, truncate_string_field
 from .db_manip import create_user, credentials_valid, delete_user
 
 auth_routes = Blueprint("auth_routes", __name__)
@@ -28,6 +28,9 @@ def register():
     
     if password is None or password == '':
         return {'message': "Field 'password' is missing."}, 400
+
+    forename = truncate_string_field(forename)
+    surname = truncate_string_field(surname)
     
     if not validate_email(email):
         return {'message': "Invalid email."}, 400
@@ -76,7 +79,7 @@ def delete():
     parts = auth_header.split()
 
     if len(parts) != 2 or parts[0] != "Bearer":
-        return {"message": "Invalid Authorization Header"}, 400
+        return {"message": "Unknown user."}, 400
 
     token = parts[1]
 

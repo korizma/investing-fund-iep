@@ -10,15 +10,21 @@ EMAIL_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9._]*@([a-zA-Z][a-zA-Z0-9]*\.)+[a-
 JWT_ALGO = "HS256"
 JWT_EXP_TIME_MIN = 60
 JWT_SECRET_KEY_LOCATION = "JWT_SECRET_KEY"
+MAX_STRING_FIELD_LENGTH = 256
+
+def truncate_string_field(value: str) -> str:
+    return value[:MAX_STRING_FIELD_LENGTH]
 
 def validate_password(password : str) -> bool:
-    if len(password) < 8:
+    if len(password) < 8 or len(password) > MAX_STRING_FIELD_LENGTH:
         return False
     else:
         return True
     
 def validate_email(email : str) -> bool:
-    if EMAIL_PATTERN.fullmatch(email) is not None:
+    if len(email) > MAX_STRING_FIELD_LENGTH:
+        return False
+    elif EMAIL_PATTERN.fullmatch(email) is not None:
         return True
     else:
         return False
