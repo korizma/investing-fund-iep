@@ -2,12 +2,10 @@ import os
 
 from flask import Flask
 
-from .database import init_database
 from .routes import auth_routes
 
 
 app: Flask = Flask(__name__)
-init_database()
 app.register_blueprint(auth_routes)
 
 if __name__ == "__main__":

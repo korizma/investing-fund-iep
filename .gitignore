@@ -1,3 +1,5 @@
 AGENTS.md
 env/
 auth_service/src/__pycache__
+employee_service/src/__pycache__
+director_service/src/__pycache__
