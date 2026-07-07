@@ -1,9 +1,11 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 
-from .validator import validate_email, validate_password
-
+from .validator import validate_email, validate_password, validate_jwt, create_jwt
+from .db_manip import create_user, credentials_valid, delete_user
 
 auth_routes = Blueprint("auth_routes", __name__)
+
+DEFAULT_USER_ROLE = 'employee'
 
 
 @auth_routes.post("/register")
@@ -33,8 +35,7 @@ def register():
     if not validate_password(password):
         return {'message': "Invalid password."}, 400
 
-    # placeholder
-    if True:
+    if not create_user(forename, surname, email, password, DEFAULT_USER_ROLE):
         return {'message': "Email already exists."}, 400
 
     return {}, 200
@@ -55,12 +56,14 @@ def login():
     if not validate_email(email):
         return {'message': "Invalid email."}, 400
 
-    # True is just a placeholder
-    if True:
+    user = credentials_valid(email, password)
+
+    if user is None:
         return {'message': "Invalid credentials."}, 400
 
-    # 1234567890 is just a placeholder
-    return {"accessToken": 1234567890}, 200
+    token = create_jwt(user)
+
+    return {"accessToken": token}, 200
 
 @auth_routes.post("/delete")
 def delete():
@@ -77,6 +80,10 @@ def delete():
 
     token = parts[1]
 
-    # placeholder
-    if True:
+    valid, email = validate_jwt(token)
+
+    if not valid or not delete_user(email):
         return {"message": "Unknown user."}, 400
+    
+    return {}, 200
+    

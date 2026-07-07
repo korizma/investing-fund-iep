@@ -59,3 +59,10 @@ def session_scope() -> Iterator[Session]:
 
 def init_database() -> None:
     Base.metadata.create_all(bind=get_engine())
+
+    write_initial_data()
+
+def write_initial_data():
+    from .db_manip import create_user
+    create_user('Scrooge', 'McDuck', 'onlymoney@gmail.com', 'evenmoremoney', 'director')
+    
