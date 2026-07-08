@@ -5,6 +5,10 @@ import os
 from pymongo import MongoClient
 import redis
 import uuid
+import json
+
+from bson import ObjectId
+from bson.errors import InvalidId
 
 
 auth_routes = Blueprint("auth_routes", __name__)
@@ -83,32 +87,32 @@ def create_buy_order():
     
     data = request.get_json(silent=True) or {}
 
-    name = data['name']
-    categories = data['categories']
-    buying_price = data['buying_price']
-    info = data['info']
+    name = data.get('name')
+    categories = data.get('categories')
+    buying_price = data.get('buying_price')
+    info = data.get('info')
 
     if name is None or name == '':
-        return {'message': 'Field name is missing'}, 400
+        return {'message': 'Field name is missing.'}, 400
     
     if categories is None:
-        return {'message': 'Field categories is missing'}, 400
+        return {'message': 'Field categories is missing.'}, 400
     
     if buying_price is None or buying_price == '':
-        return {'message': 'Field buying_price is missing'}, 400
+        return {'message': 'Field buying_price is missing.'}, 400
     
     if info is None:
-        return {'message': 'Field info is missing'}, 400
+        return {'message': 'Field info is missing.'}, 400
     
     if categories == []:
-        return {'message': 'Categories list is empty'}, 400
+        return {'message': 'Categories list is empty.'}, 400
     
     try:
         if int(buying_price) <= 0:
-            return {'message': 'Invalid buying price'}, 400
+            return {'message': 'Invalid buying price.'}, 400
 
     except ValueError:
-        return {'message': 'Invalid buying price'}, 400
+        return {'message': 'Invalid buying price.'}, 400
     
     uuid_doc = str(uuid.uuid4())
 
@@ -120,9 +124,7 @@ def create_buy_order():
         'info': info
     }
 
-    r.set(uuid_doc, value, ex=3600)
-
-    print('employee_service: inserting into redis:', value)
+    r.set(uuid_doc, json.dumps(value), ex=3600)
 
     return {}, 200
 
@@ -142,8 +144,8 @@ def create_sell_order():
     
     data = request.get_json(silent=True) or {}
 
-    id = data['id']
-    selling_price = data['selling_price']
+    id = data.get('id')
+    selling_price = data.get('selling_price')
 
     if id is None or id == '':
         return {'message': 'Field id is missing.'}, 400
@@ -151,17 +153,22 @@ def create_sell_order():
     if selling_price is None or selling_price == '':
         return {'message': 'Field selling_price is missing.'}, 400
 
-    imovina = assets.find_one({'_id': id})
+    try:
+        asset_id = ObjectId(id)
+    except InvalidId:
+        return {'message': 'Invalid id.'}, 400
+
+    imovina = assets.find_one({'_id': asset_id})
 
     if imovina is None:
         return {'message': 'Invalid id.'}, 400
 
     try:
         if int(selling_price) <= 0:
-            return {'message': 'Invalid selling price'}, 400
+            return {'message': 'Invalid selling price.'}, 400
 
     except ValueError:
-        return {'message': 'Invalid selling price'}, 400
+        return {'message': 'Invalid selling price.'}, 400
     
     # add to redis
     uuid_doc = str(uuid.uuid4())
@@ -172,8 +179,6 @@ def create_sell_order():
         'selling_price': selling_price
     }
 
-    r.set(uuid_doc, value, ex=3600)
-
-    print('employee_service: inserting into redis:', value)
+    r.set(uuid_doc, json.dumps(value), ex=3600)
 
     return {}, 200

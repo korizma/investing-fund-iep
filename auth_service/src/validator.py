@@ -35,12 +35,17 @@ def get_jwt_secret():
     return os.environ[JWT_SECRET_KEY_LOCATION]
 
 def create_jwt(user: User) -> str:
+
+    timestamp = datetime.now(timezone.utc)
+
     payload = {
         "forename": user.forename,
         "surname": user.surname,
-        "email": user.email,
+        "sub": user.email,
         "role": user.role,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=JWT_EXP_TIME_MIN),
+        "exp": timestamp + timedelta(minutes=JWT_EXP_TIME_MIN),
+        "nbf": timestamp,
+        "type": "access"
     }
 
     token: str = jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGO)
@@ -55,4 +60,4 @@ def validate_jwt(token: str) -> Tuple[bool, str]:
     except jwt.InvalidTokenError:
         return False, ""
 
-    return True, payload["email"]
+    return True, payload["sub"]

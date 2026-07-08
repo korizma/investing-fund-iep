@@ -5,6 +5,7 @@ import redis
 from .validator import validate_jwt, extract_jwt
 from pymongo import MongoClient
 from datetime import datetime, timezone
+from bson import ObjectId
 
 auth_routes = Blueprint("auth_routes", __name__)
 
@@ -49,8 +50,6 @@ def pending_orders():
         try:
             document = json.loads(raw)
 
-            print("director_service: Read from redis:", document)
-
             document['uuid'] = key
 
             orders.append(document)
@@ -76,8 +75,8 @@ def decision():
     
     data = request.get_json(silent=True) or {}
 
-    uuid_request: str | None = data['uuid']
-    approved: str | None = data['approved']
+    uuid_request: str | None = data.get('uuid')
+    approved: str | None = data.get('approved')
 
     if uuid_request is None or uuid_request == '':
         return {'message': 'Field uuid is missing.'}, 400
@@ -86,23 +85,23 @@ def decision():
     redis_request = r.get(uuid_request)
 
     if redis_request is None:
-        return {'message', 'Invalid uuid.'}, 400
+        return {'message': 'Invalid uuid.'}, 400
 
     if approved is None or approved == '':
         return {'message': 'Field approved is missing.'}, 400
     
     redis_request = json.loads(redis_request)
     
-    approved = approved.lower()
-    if approved != 'true' and approved != 'false':
-        return {'message': 'Invalid decision'}, 400
+    if approved != True and approved != False:
+        return {'message': 'Invalid decision.'}, 400
     
     deleted = r.delete(uuid_request)
     # someone all ready got this request
     if deleted != 1:
-        return {'message', 'Invalid uuid.'}, 400
+        return {'message': 'Invalid uuid.'}, 400
     
-    print('director_service: deleted from redis:', redis_request)
+    if not approved:
+        return {}, 200
     
     if redis_request['order_type'] == 'BUY':
         to_insert = {
@@ -113,7 +112,6 @@ def decision():
                 'info': redis_request['info']
             }
         
-        print("director_service: BUY just got approved, inserting into mongodb:", to_insert)
 
         assets.insert_one(document=to_insert)
 
@@ -122,15 +120,16 @@ def decision():
         assets.update_one(
             filter=
             {
-                '_id': redis_request['id']
+                '_id': ObjectId(redis_request['id'])
             },
             update=
             {
-                'selling_price': redis_request['selling_price'],
-                'selling_date': datetime.now(timezone.utc)
+                '$set': {
+                    'selling_price': redis_request['selling_price'],
+                    'selling_date': datetime.now(timezone.utc)
+                }
             }
         )
-        print("director_service: SELL just got approved, updating mongodb:", redis_request)
         return {}, 200
     
     return {'message': 'Internal server error'}, 500
@@ -156,7 +155,7 @@ def report():
         
         categories = asset['categories']
         buying_price = asset['buying_price']
-        selling_price = asset['selling_price']
+        selling_price = asset.get('selling_price') or 0
 
         for category in categories:
             if category in statistics:
@@ -169,6 +168,6 @@ def report():
                     'earned': selling_price
                 }
 
-    sorted_statistics = sorted(statistics.items(), key=lambda x: (x['earned'], x['spent'], x['category']))
+    sorted_statistics = sorted(statistics.values(), key=lambda x: (-x['earned'], x['spent'], x['category']))
 
     return {'statistics': sorted_statistics}, 200

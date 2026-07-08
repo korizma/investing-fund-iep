@@ -54,7 +54,7 @@ services:
     build:
       context: ./employee_service
     environment:
-      JWT_SECRET_KEY: dev-secret
+      JWT_SECRET_KEY: super-secret-key-change-in-production
       MONGO_URI: mongodb://mongodb:27017
       MONGO_DATABASE: iep_fund
       REDIS_URL: redis://redis:6379/0
@@ -73,7 +73,7 @@ services:
     build:
       context: ./director_service
     environment:
-      JWT_SECRET_KEY: dev-secret
+      JWT_SECRET_KEY: super-secret-key-change-in-production
       MONGO_URI: mongodb://mongodb:27017
       MONGO_DATABASE: iep_fund
       REDIS_URL: redis://redis:6379/0
