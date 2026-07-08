@@ -1,42 +1,28 @@
 from flask import Blueprint, request
 from .validator import validate_jwt, extract_jwt
-from datetime import datetime, timezone
-import re
+from .search_helpers import serialize_asset, create_search_query
+import os
+from pymongo import MongoClient
+import redis
+import uuid
+
 
 auth_routes = Blueprint("auth_routes", __name__)
 
-import os
-from pymongo import MongoClient
-
+# veza sa mongodb
 mongo_client = MongoClient(os.environ["MONGO_URI"])
 mongo_db = mongo_client[os.environ["MONGO_DATABASE"]]
-
+# pristup svim dokumentima
 assets = mongo_db["assets"]
 
-def serialize_asset(asset):
-    serialized = {
-        "id": str(asset["_id"]),
-        "name": asset["name"],
-        "categories": asset["categories"],
-        "buying_price": asset["buying_price"],
-        "buying_date": asset["buying_date"].isoformat(),
-        "info": asset.get("info", {})
-    }
+# redis
+REDIS_URL = os.environ["REDIS_URL"]
 
-    selling_date = asset.get("selling_date")
-    if selling_date is not None:
-        serialized["selling_price"] = asset.get("selling_price")
-        serialized["selling_date"] = selling_date.isoformat()
+r = redis.from_url(
+    REDIS_URL,
+    decode_responses=True,
+)
 
-    return serialized
-
-def parse_iso_datetime(value: str) -> datetime:
-    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-
-    if dt.tzinfo is not None:
-        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
-
-    return dt
 
 @auth_routes.post("/search")
 def search():
@@ -70,42 +56,7 @@ def search():
             }
         )
 
-    query = {"$and": []}
-
-    if name:
-        query["name"] = {"$regex": re.escaped(name)}
-
-    if category:
-        query["categories"] = category
-
-    if buying_date:
-        query["buying_date"] = {"$gt": parse_iso_datetime(buying_date)}
-
-    if selling_date:
-        query["selling_date"] = {"$lt": parse_iso_datetime(selling_date), "$exists": True, "$ne": None}
-
-    for info_filter in info_filters:
-        field = "info." + info_filter["field"]
-        operator = info_filter["operator"]
-        value = info_filter["value"]
-
-        if operator not in ["eq", "ne", "gt", "gte", "lt", "lte"]:
-            continue
-
-        mongo_operator = {
-            "eq": "$eq",
-            "ne": "$ne",
-            "gt": "$gt",
-            "gte": "$gte",
-            "lt": "$lt",
-            "lte": "$lte",
-        }[operator]
-
-        
-        query['$and'].append({field: {mongo_operator: value}})
-
-    if query["$and"] == []:
-        query.pop("$and")
+    query = create_search_query(name, category, buying_date, selling_date, info_filters)
 
     results = list(assets.find(query))
 
@@ -118,8 +69,111 @@ def search():
 
 @auth_routes.post("/create_buy_order")
 def create_buy_order():
-    pass
+    global assets
+
+    token = extract_jwt(request.headers.get("Authorization"))
+
+    if token is None:
+        return {'msg': 'Missing Authorization Header'}, 401
+    
+    valid = validate_jwt(token)
+
+    if not valid:
+        return {'message': 'Invalid credentials.'}, 400
+    
+    data = request.get_json(silent=True) or {}
+
+    name = data['name']
+    categories = data['categories']
+    buying_price = data['buying_price']
+    info = data['info']
+
+    if name is None or name == '':
+        return {'message': 'Field \'name\' is missing'}, 400
+    
+    if categories is None:
+        return {'message': 'Field \'categories\' is missing'}, 400
+    
+    if buying_price is None or buying_price == '':
+        return {'message': 'Field \'buying_price\' is missing'}, 400
+    
+    if info is None:
+        return {'message': 'Field \'info\' is missing'}, 400
+    
+    if categories == []:
+        return {'message': 'Categories list is empty'}, 400
+    
+    try:
+        if int(buying_price) <= 0:
+            return {'message': 'Invalid buying price'}, 400
+
+    except ValueError:
+        return {'message': 'Invalid buying price'}, 400
+    
+    uuid_doc = str(uuid.uuid4())
+
+    value = {
+        'order_type': "BUY",
+        'name': name,
+        'categories': categories,
+        'buying_price': buying_price,
+        'info': info
+    }
+
+    r.set(uuid_doc, value, ex=3600)
+
+    print('employee_service: inserting into redis:', value)
+
+    return {}, 200
 
 @auth_routes.post("/create_sell_order")
 def create_sell_order():
-    pass
+    global assets
+
+    token = extract_jwt(request.headers.get("Authorization"))
+
+    if token is None:
+        return {'msg': 'Missing Authorization Header'}, 401
+    
+    valid = validate_jwt(token)
+
+    if not valid:
+        return {'message': 'Invalid credentials.'}, 400
+    
+    data = request.get_json(silent=True) or {}
+
+    id = data['id']
+    selling_price = data['selling_price']
+
+    if id is None or id == '':
+        return {'message': 'Field \'id\' is missing.'}, 400
+    
+    if selling_price is None or selling_price == '':
+        return {'message': 'Field \'selling_price\' is missing.'}, 400
+
+    imovina = assets.find_one({'_id': id})
+
+    if imovina is None:
+        return {'message': 'Invalid id.'}, 400
+
+    try:
+        if int(selling_price) <= 0:
+            return {'message': 'Invalid selling price'}, 400
+
+    except ValueError:
+        return {'message': 'Invalid selling price'}, 400
+    
+    # add to redis
+    uuid_doc = str(uuid.uuid4())
+
+    value = {
+        'order_type': 'SELL',
+        'id': id,
+        'selling_price': selling_price
+    }
+
+    r.set(uuid_doc, value, ex=3600)
+
+    print('employee_service: inserting into redis:', value)
+
+    return {}, 200

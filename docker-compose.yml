@@ -42,7 +42,7 @@ services:
       context: ./auth_service
     environment:
       DATABASE_URL: postgresql://iep_user:iep_password@postgres:5432/iep_auth
-      JWT_SECRET_KEY: dev-secret
+      JWT_SECRET_KEY: super-secret-key-change-in-production
       FLASK_ENV: development
     ports:
       - "5000:5000"
@@ -62,7 +62,7 @@ services:
       REDIS_PORT: 6379
       FLASK_ENV: development
     ports:
-      - "5001:5000"
+      - "5001:5001"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -81,7 +81,7 @@ services:
       REDIS_PORT: 6379
       FLASK_ENV: development
     ports:
-      - "5002:5000"
+      - "5002:5002"
     depends_on:
       mongodb:
         condition: service_healthy
