@@ -89,16 +89,16 @@ def create_buy_order():
     info = data['info']
 
     if name is None or name == '':
-        return {'message': 'Field \'name\' is missing'}, 400
+        return {'message': 'Field name is missing'}, 400
     
     if categories is None:
-        return {'message': 'Field \'categories\' is missing'}, 400
+        return {'message': 'Field categories is missing'}, 400
     
     if buying_price is None or buying_price == '':
-        return {'message': 'Field \'buying_price\' is missing'}, 400
+        return {'message': 'Field buying_price is missing'}, 400
     
     if info is None:
-        return {'message': 'Field \'info\' is missing'}, 400
+        return {'message': 'Field info is missing'}, 400
     
     if categories == []:
         return {'message': 'Categories list is empty'}, 400
@@ -146,10 +146,10 @@ def create_sell_order():
     selling_price = data['selling_price']
 
     if id is None or id == '':
-        return {'message': 'Field \'id\' is missing.'}, 400
+        return {'message': 'Field id is missing.'}, 400
     
     if selling_price is None or selling_price == '':
-        return {'message': 'Field \'selling_price\' is missing.'}, 400
+        return {'message': 'Field selling_price is missing.'}, 400
 
     imovina = assets.find_one({'_id': id})
 

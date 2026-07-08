@@ -18,16 +18,16 @@ def register():
     password: str = data.get("password")
 
     if forename is None or forename == '':
-        return {'message': "Field 'forename' is missing."}, 400
+        return {'message': "Field forename is missing."}, 400
     
     if surname is None or surname == '':
-        return {'message': "Field 'surname' is missing."}, 400
+        return {'message': "Field surname is missing."}, 400
     
     if email is None or email == '':
-        return {'message': "Field 'email' is missing."}, 400
+        return {'message': "Field email is missing."}, 400
     
     if password is None or password == '':
-        return {'message': "Field 'password' is missing."}, 400
+        return {'message': "Field password is missing."}, 400
 
     forename = truncate_string_field(forename)
     surname = truncate_string_field(surname)
@@ -51,10 +51,10 @@ def login():
     password: str = data.get("password")
 
     if email is None or email == '':
-        return {'message': "Field 'email' is missing."}, 400
+        return {'message': "Field email is missing."}, 400
 
     if password is None or password == '':
-        return {'message': "Field 'password' is missing."}, 400
+        return {'message': "Field password is missing."}, 400
 
     if not validate_email(email):
         return {'message': "Invalid email."}, 400

@@ -80,7 +80,7 @@ def decision():
     approved: str | None = data['approved']
 
     if uuid_request is None or uuid_request == '':
-        return {'message': 'Field \'uuid\' is missing.'}, 400
+        return {'message': 'Field uuid is missing.'}, 400
     
 
     redis_request = r.get(uuid_request)
@@ -89,7 +89,7 @@ def decision():
         return {'message', 'Invalid uuid.'}, 400
 
     if approved is None or approved == '':
-        return {'message': 'Field \'approved\' is missing.'}, 400
+        return {'message': 'Field approved is missing.'}, 400
     
     redis_request = json.loads(redis_request)
     
