@@ -79,7 +79,7 @@ def delete():
     parts = auth_header.split()
 
     if len(parts) != 2 or parts[0] != "Bearer":
-        return {"message": "Unknown user."}, 400
+        return {"msg": "Missing Authorization Header"}, 401
 
     token = parts[1]
 

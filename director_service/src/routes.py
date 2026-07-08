@@ -34,7 +34,7 @@ def pending_orders():
     valid = validate_jwt(token)
 
     if not valid:
-        return {'message': 'Invalid credentials.'}, 400
+        return {"msg": "Missing Authorization Header"}, 401
     
 
     orders = []
@@ -72,7 +72,7 @@ def decision():
     valid = validate_jwt(token)
 
     if not valid:
-        return {'message': 'Invalid credentials.'}, 400
+        return {"msg": "Missing Authorization Header"}, 401
     
     data = request.get_json(silent=True) or {}
 
@@ -146,7 +146,7 @@ def report():
     valid = validate_jwt(token)
 
     if not valid:
-        return {'message': 'Invalid credentials.'}, 400
+        return {"msg": "Missing Authorization Header"}, 401
     
     asset_list = list(assets.find(filter={}))
 

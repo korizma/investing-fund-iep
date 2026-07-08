@@ -36,7 +36,7 @@ def search():
     valid = validate_jwt(token)
 
     if not valid:
-        return {'message': 'Invalid credentials.'}, 400
+        return {"msg": "Missing Authorization Header"}, 401
     
 
     data = request.get_json(silent=True) or {}
@@ -79,7 +79,7 @@ def create_buy_order():
     valid = validate_jwt(token)
 
     if not valid:
-        return {'message': 'Invalid credentials.'}, 400
+        return {"msg": "Missing Authorization Header"}, 401
     
     data = request.get_json(silent=True) or {}
 
@@ -138,7 +138,7 @@ def create_sell_order():
     valid = validate_jwt(token)
 
     if not valid:
-        return {'message': 'Invalid credentials.'}, 400
+        return {"msg": "Missing Authorization Header"}, 401
     
     data = request.get_json(silent=True) or {}
 

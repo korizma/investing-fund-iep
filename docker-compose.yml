@@ -7,8 +7,8 @@ services:
       POSTGRES_PASSWORD: iep_password
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    # volumes:
+    #   - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U iep_user -d iep_auth"]
       interval: 5s
@@ -19,8 +19,8 @@ services:
     image: mongo:7
     ports:
       - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
+    # volumes:
+    #   - mongo_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 5s
@@ -88,6 +88,6 @@ services:
       redis:
         condition: service_healthy
 
-volumes:
-  postgres_data:
-  mongo_data:
+# volumes:
+#   postgres_data:
+#   mongo_data:

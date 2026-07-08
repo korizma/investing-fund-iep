@@ -5,7 +5,9 @@ from .models import User
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
 
-EMAIL_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9._]*@([a-zA-Z][a-zA-Z0-9]*\.)+[a-zA-Z]+")
+# EMAIL_PATTERN = re.compile(r"[a-z][a-z0-9._]*@([a-z][a-z0-9]*\.)+[a-z]+")
+EMAIL_PATTERN = re.compile(r"[a-z][a-z0-9._]*@gmail.com")
+
 
 JWT_ALGO = "HS256"
 JWT_EXP_TIME_MIN = 60
