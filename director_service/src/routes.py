@@ -6,6 +6,11 @@ from .validator import validate_jwt, extract_jwt
 from pymongo import MongoClient
 from datetime import datetime, timezone
 from bson import ObjectId
+from web3 import Web3
+from time import sleep
+from .web3 import deploy_and_get_response, get_contract
+
+import threading
 
 auth_routes = Blueprint("auth_routes", __name__)
 
@@ -76,7 +81,7 @@ def decision():
     data = request.get_json(silent=True) or {}
 
     uuid_request: str | None = data.get('uuid')
-    approved: str | None = data.get('approved')
+    voters = data.get('voters')
 
     if uuid_request is None or uuid_request == '':
         return {'message': 'Field uuid is missing.'}, 400
@@ -87,52 +92,32 @@ def decision():
     if redis_request is None:
         return {'message': 'Invalid uuid.'}, 400
 
-    if approved is None or approved == '':
-        return {'message': 'Field approved is missing.'}, 400
+    if voters is None or voters == '' or voters == []:
+        return {'message': 'Field voters is missing.'}, 400
     
     redis_request = json.loads(redis_request)
     
-    if approved != True and approved != False:
-        return {'message': 'Invalid decision.'}, 400
+    # address checking
+    for addr in voters:
+        if not Web3.is_address(addr):
+            return {'message': 'Invalid voter address.'}, 400
+
+    if len(voters) % 2 == 0:
+        return {'message': 'Even number of voters.'}, 400
     
     deleted = r.delete(uuid_request)
     # someone all ready got this request
     if deleted != 1:
         return {'message': 'Invalid uuid.'}, 400
     
-    if not approved:
-        return {}, 200
-    
-    if redis_request['order_type'] == 'BUY':
-        to_insert = {
-                'name': redis_request['name'],
-                'categories': redis_request['categories'],
-                'buying_date': datetime.now(timezone.utc),
-                'buying_price': redis_request['buying_price'],
-                'info': redis_request['info']
-            }
-        
+    contract_address, contract_abi, response = deploy_and_get_response(voters)
 
-        assets.insert_one(document=to_insert)
+    # start thread that checks the chain for status
+    thread_handler = threading.Thread(target=listen_to_chain, args=(contract_address, contract_abi, redis_request))
 
-        return {}, 200
-    elif redis_request['order_type'] == 'SELL':
-        assets.update_one(
-            filter=
-            {
-                '_id': ObjectId(redis_request['id'])
-            },
-            update=
-            {
-                '$set': {
-                    'selling_price': redis_request['selling_price'],
-                    'selling_date': datetime.now(timezone.utc)
-                }
-            }
-        )
-        return {}, 200
+    thread_handler.start()
     
-    return {'message': 'Internal server error'}, 500
+    return response, 200
 
 @auth_routes.get("/report")
 def report():
@@ -171,3 +156,46 @@ def report():
     sorted_statistics = sorted(statistics.values(), key=lambda x: (-x['earned'], x['spent'], x['category']))
 
     return {'statistics': sorted_statistics}, 200
+
+
+
+def listen_to_chain(contract_address, contract_abi, redis_request):
+    contract_vt = get_contract(contract_address, contract_abi)
+
+    msg = contract_vt.functions.decisionFinalized().call()
+
+    while msg == 0:
+        sleep(1)
+        msg = contract_vt.functions.decisionFinalized().call()
+
+    if msg == -1:
+        return
+    
+    if redis_request['order_type'] == 'BUY':
+        to_insert = {
+                'name': redis_request['name'],
+                'categories': redis_request['categories'],
+                'buying_date': datetime.now(timezone.utc),
+                'buying_price': redis_request['buying_price'],
+                'info': redis_request['info']
+            }
+        
+
+        assets.insert_one(document=to_insert)
+
+    elif redis_request['order_type'] == 'SELL':
+        assets.update_one(
+            filter=
+            {
+                '_id': ObjectId(redis_request['id'])
+            },
+            update=
+            {
+                '$set': {
+                    'selling_price': redis_request['selling_price'],
+                    'selling_date': datetime.now(timezone.utc)
+                }
+            }
+        )
+
+    

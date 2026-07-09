@@ -37,6 +37,14 @@ services:
       timeout: 5s
       retries: 10
 
+  ganache:
+    image: trufflesuite/ganache-cli:latest
+    command:
+      - --host
+      - 0.0.0.0
+    ports:
+      - "8545:8545"
+
   auth:
     build:
       context: ./auth_service
@@ -79,6 +87,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      GANACHE_PROVIDER_URL: http://ganache:8545
       FLASK_ENV: development
     ports:
       - "5002:5002"
@@ -87,6 +96,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ganache:
+        condition: service_started
 
 # volumes:
 #   postgres_data:
