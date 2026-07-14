@@ -7,3 +7,4 @@ iep_grader/.venv
 iep_grader/__pycache__
 iep_grader/.pytest_cache
 iep_grader/grade_report.json
+k8s/secrets.env
